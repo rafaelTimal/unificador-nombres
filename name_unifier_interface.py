@@ -36,13 +36,9 @@ def main():
             st.write("Porcentajes de similitud")
             st.dataframe(pd.DataFrame(df_porcentaje_similitud))
 
-            # Unificar los nombres
-            # Crear un DataFrame a partir del diccionario
-            df_unificado = pd.DataFrame.from_dict(unificador.unificar_nombres(),
-                                                  orient='index')
             # Mostrar el DataFrame después de unificación
             st.write("Nombres Unificados")
-            st.dataframe(df_unificado)
+            st.dataframe(unificador.unificar_nombres())
 
 
 # Ejecutar la aplicación Streamlit

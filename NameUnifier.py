@@ -47,15 +47,21 @@ class NameUnifier:
             return None
 
         df_unificado = self.dataframe.copy()
+        df_unificado['Mejor Nombre'] = None
 
         variantes = self.dataframe.columns[1:]
 
-        # Recorrer todas las columnas
+        # Recorrer Todas las filas
         for index, row in self.dataframe.iterrows():
-            # Recorrer Todas las filas
+            max_valor = float("-inf")
+            # Recorrer todas las columnas
             for col_name in variantes:
+                current_name = row[col_name]
                 metodo, similitud = cacular_porcentajes_similitud(self.metodos, self.dataframe.at[index, 'Nombre'],
-                                                                  normalizar(row[col_name]))
+                                                                  normalizar(current_name))
+                if similitud > max_valor:
+                    max_valor = similitud
+                    df_unificado.at[index, 'Mejor Nombre'] = f"{current_name} ({similitud :.2f}%)"
                 new_column = col_name + ' %'
                 if new_column not in df_unificado.columns:
                     df_unificado.insert(df_unificado.columns.get_loc(col_name) + 1,
@@ -72,24 +78,26 @@ class NameUnifier:
 
         for index, row in self.dataframe.iterrows():
             nombre_base = normalizar(row['Nombre'])
-            variantes = [row[columna] for columna in self.dataframe.columns[1:]]
+            variantes = {columna: row[columna] for columna in self.dataframe.columns[1:]}
+
+            if nombre_base not in nombres_unificados:
+                nombres_unificados[nombre_base] = []
 
             # Buscar si alguna variante coincide con el nombre base
             encontrado = False
-            for variante in variantes:
+            for columna, variante in variantes.items():
                 variante_normalizada = normalizar(variante)
                 metodo, similitud = cacular_porcentajes_similitud(self.metodos, nombre_base,
                                                                   variante_normalizada)
 
                 if similitud >= self.umbral_similitud:
-                    encontrado = True
-                    if nombre_base in nombres_unificados:
-                        nombres_unificados[nombre_base].append(variante)
-                    else:
-                        nombres_unificados[nombre_base] = [variante]
+                    nombres_unificados[nombre_base].append(variante)
 
-            # Si ninguna variante coincide, agregar el nombre base como nuevo
-            if not encontrado:
-                nombres_unificados[nombre_base] = [nombre_base]
+            # Si no se encontró ninguna variante que supere el umbral, se agrega el nombre base
+            if not nombres_unificados[nombre_base]:
+                nombres_unificados[nombre_base].append(row['Nombre'])
 
-        return nombres_unificados
+        # Convertir el diccionario en un DataFrame
+        df_resultados = pd.DataFrame.from_dict(nombres_unificados, orient='index').reset_index()
+        df_resultados.columns = ['Nombre base'] + [f'Variante {i + 1}' for i in range(len(df_resultados.columns) - 1)]
+        return df_resultados
